@@ -1,73 +1,36 @@
-# PollApp - Modern Polling Application
+# Polling App
 
-A modern, responsive polling application built with Next.js 15, TypeScript, Tailwind CSS, and Shadcn UI components.
+A modern polling application built with Next.js 15, TypeScript, and Supabase for authentication and data storage.
 
-## 🚀 Features
+## Features
 
-- **User Authentication**: Secure login and registration system
-- **Create Polls**: Intuitive interface for creating polls with multiple options
-- **Vote on Polls**: Real-time voting with visual progress indicators
-- **Browse Polls**: Discover and search through community-created polls
-- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
-- **Modern UI**: Beautiful interface built with Shadcn UI components
+- 🔐 **User Authentication** - Sign up, sign in, and sign out with Supabase Auth
+- 📊 **Create Polls** - Create polls with multiple options, settings, and end dates
+- 🗳️ **Vote on Polls** - Vote on polls with single or multiple selection
+- 🛡️ **Protected Routes** - Middleware-based route protection
+- 🎨 **Modern UI** - Beautiful interface built with shadcn/ui components
+- 📱 **Responsive Design** - Works perfectly on desktop and mobile
 
-## 🛠️ Tech Stack
+## Poll Settings
 
-- **Framework**: Next.js 15 with App Router
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS v4
-- **UI Components**: Shadcn UI
-- **Icons**: Lucide React
-- **State Management**: React Context API
-- **Authentication**: Custom auth service (ready for backend integration)
+- **Multiple Options** - Allow users to select multiple poll options
+- **Login Required** - Require users to be logged in to vote
+- **End Date** - Set optional end dates for polls
+- **Real-time Updates** - Live voting results and status
 
-## 📁 Project Structure
-
-```
-src/
-├── app/                    # Next.js App Router pages
-│   ├── auth/              # Authentication pages
-│   │   ├── login/         # Login page
-│   │   └── register/      # Registration page
-│   ├── polls/             # Polls listing page
-│   ├── create-poll/       # Create poll page
-│   ├── profile/           # User profile page (placeholder)
-│   ├── globals.css        # Global styles
-│   ├── layout.tsx         # Root layout
-│   └── page.tsx           # Home page
-├── components/            # React components
-│   ├── auth/              # Authentication components
-│   │   ├── LoginForm.tsx
-│   │   └── RegisterForm.tsx
-│   ├── polls/             # Poll-related components
-│   │   ├── PollCard.tsx
-│   │   └── CreatePollForm.tsx
-│   ├── layout/            # Layout components
-│   │   └── Header.tsx
-│   └── ui/                # Shadcn UI components
-├── lib/                   # Utility libraries
-│   ├── auth/              # Authentication utilities
-│   │   └── auth.ts
-│   ├── types/             # TypeScript type definitions
-│   │   └── index.ts
-│   └── utils.ts           # General utilities
-├── hooks/                 # Custom React hooks
-│   └── useAuth.ts         # Authentication hook
-└── contexts/              # React contexts (placeholder)
-```
-
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
 - Node.js 18+ 
 - npm or yarn
+- Supabase account
 
 ### Installation
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/raysummer9/polling-app.git
 cd polling-app
 ```
 
@@ -76,81 +39,75 @@ cd polling-app
 npm install
 ```
 
-3. Run the development server:
+3. Set up Supabase:
+   - Create a new project at [supabase.com](https://supabase.com)
+   - Go to Settings > API
+   - Copy your Project URL and anon/public key
+
+4. Create environment variables:
+```bash
+cp .env.local.example .env.local
+```
+
+5. Add your Supabase credentials to `.env.local`:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+6. Run the development server:
 ```bash
 npm run dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+7. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## 📱 Available Routes
+## Project Structure
 
-- `/` - Home page with app overview
-- `/auth/login` - User login page
-- `/auth/register` - User registration page
-- `/polls` - Browse all polls
-- `/create-poll` - Create a new poll
-- `/profile` - User profile (placeholder)
-
-## 🎨 Components Overview
-
-### Authentication Components
-- **LoginForm**: Handles user login with email and password
-- **RegisterForm**: Handles user registration with form validation
-
-### Poll Components
-- **PollCard**: Displays individual polls with voting functionality
-- **CreatePollForm**: Form for creating new polls with dynamic options
-
-### Layout Components
-- **Header**: Navigation header with user menu and authentication status
-
-## 🔧 Configuration
-
-### Environment Variables
-
-Create a `.env.local` file in the root directory:
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
+```
+src/
+├── app/                    # Next.js App Router pages
+│   ├── auth/              # Authentication pages
+│   ├── create-poll/       # Poll creation page
+│   ├── polls/             # Polls browsing page
+│   └── layout.tsx         # Root layout with AuthProvider
+├── components/            # React components
+│   ├── auth/              # Authentication forms
+│   ├── layout/            # Layout components
+│   ├── polls/             # Poll-related components
+│   └── ui/                # shadcn/ui components
+├── contexts/              # React contexts
+│   └── AuthContext.tsx    # Authentication context
+├── lib/                   # Utility libraries
+│   ├── supabase/          # Supabase client configurations
+│   └── utils.ts           # Utility functions
+└── hooks/                 # Custom React hooks
 ```
 
-### Shadcn UI
+## Authentication Flow
 
-The project uses Shadcn UI components. To add new components:
+1. **Sign Up**: Users can create accounts with email/password
+2. **Email Verification**: Supabase sends verification emails
+3. **Sign In**: Users can sign in with verified accounts
+4. **Protected Routes**: Middleware redirects unauthenticated users
+5. **Session Management**: Automatic session handling with cookies
 
-```bash
-npx shadcn@latest add <component-name>
-```
+## Technologies Used
 
-## 🚧 TODO
+- **Next.js 15** - React framework with App Router
+- **TypeScript** - Type-safe JavaScript
+- **Supabase** - Backend as a Service (Auth + Database)
+- **Tailwind CSS** - Utility-first CSS framework
+- **shadcn/ui** - Modern UI component library
+- **Radix UI** - Accessible UI primitives
 
-- [ ] Implement backend API integration
-- [ ] Add database connectivity (Prisma/TypeORM)
-- [ ] Implement real-time voting with WebSockets
-- [ ] Add user profile management
-- [ ] Implement poll categories and tags
-- [ ] Add search and filtering functionality
-- [ ] Implement poll sharing features
-- [ ] Add analytics and insights
-- [ ] Implement email notifications
-- [ ] Add dark mode support
-
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
 
-## 📄 License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [Next.js](https://nextjs.org/) for the amazing React framework
-- [Shadcn UI](https://ui.shadcn.com/) for the beautiful component library
-- [Tailwind CSS](https://tailwindcss.com/) for the utility-first CSS framework
-- [Lucide](https://lucide.dev/) for the beautiful icons
+This project is licensed under the MIT License.

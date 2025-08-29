@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Sample data for demonstration
 const samplePolls = [
@@ -72,8 +73,21 @@ const samplePolls = [
 ];
 
 export default function PollsPage() {
-  // TODO: Get actual login status from auth context
-  const isLoggedIn = false; // This should come from your auth context
+  const { user, loading } = useAuth();
+  const isLoggedIn = !!user;
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading polls...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -84,9 +98,11 @@ export default function PollsPage() {
             Discover and vote on polls created by the community
           </p>
         </div>
-        <Link href="/create-poll">
-          <Button>Create New Poll</Button>
-        </Link>
+        {isLoggedIn && (
+          <Link href="/create-poll">
+            <Button>Create New Poll</Button>
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -127,9 +143,15 @@ export default function PollsPage() {
           <p className="text-muted-foreground mb-4">
             Be the first to create a poll and start gathering opinions!
           </p>
-          <Link href="/create-poll">
-            <Button>Create Your First Poll</Button>
-          </Link>
+          {isLoggedIn ? (
+            <Link href="/create-poll">
+              <Button>Create Your First Poll</Button>
+            </Link>
+          ) : (
+            <Link href="/auth/login">
+              <Button>Sign In to Create Polls</Button>
+            </Link>
+          )}
         </div>
       )}
     </div>
