@@ -162,6 +162,8 @@ export default function PollsClient({ initialPolls, initialUserVotes, user, erro
         ))}
       </div>
 
+
+
       {polls.length === 0 && !loading && (
         <div className="text-center py-12">
           <h3 className="text-lg font-medium text-muted-foreground mb-2">

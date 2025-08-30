@@ -110,3 +110,34 @@ export async function getUserVotesWithIpServer(pollId: string) {
     return { votes: [], error: error as Error };
   }
 }
+
+export async function getPollByIdServer(pollId: string) {
+  try {
+    const supabase = await createClient();
+    const { data: poll, error } = await supabase
+      .from('polls')
+      .select(`
+        *,
+        poll_options (*),
+        author:profiles!polls_author_id_fkey (
+          id,
+          name,
+          avatar_url,
+          bio,
+          created_at,
+          updated_at
+        )
+      `)
+      .eq('id', pollId)
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to fetch poll: ${error.message}`);
+    }
+
+    return { poll, error: null };
+  } catch (error) {
+    console.error('Error fetching poll:', error);
+    return { poll: null, error: error as Error };
+  }
+}

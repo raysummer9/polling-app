@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Clock, Lock } from "lucide-react";
+import { Clock, Lock, ExternalLink } from "lucide-react";
+import Link from "next/link";
 
 interface PollOption {
   id: string;
@@ -129,7 +130,15 @@ export default function PollCard({ poll, onVote, isLoggedIn = false }: PollCardP
             </Badge>
           </div>
         </div>
-        <CardTitle className="text-lg">{poll.title}</CardTitle>
+        <CardTitle className="text-lg">
+          <Link 
+            href={`/polls/${poll.id}`}
+            className="hover:text-primary transition-colors flex items-center gap-2 group"
+          >
+            {poll.title}
+            <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </Link>
+        </CardTitle>
         <CardDescription>{poll.description}</CardDescription>
         {poll.endDate && (
           <p className="text-xs text-muted-foreground">
@@ -211,6 +220,16 @@ export default function PollCard({ poll, onVote, isLoggedIn = false }: PollCardP
             You have already voted from this IP address
           </div>
         )}
+        
+        {/* View Details Button */}
+        <div className="p-4 pt-0">
+          <Link href={`/polls/${poll.id}`}>
+            <Button variant="outline" className="w-full">
+              <ExternalLink className="h-4 w-4 mr-2" />
+              View Details
+            </Button>
+          </Link>
+        </div>
       </CardContent>
     </Card>
   );
