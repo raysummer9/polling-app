@@ -40,6 +40,7 @@ interface PollCardProps {
 export default function PollCard({ poll, onVote, isLoggedIn = false }: PollCardProps) {
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [hasVoted, setHasVoted] = useState(poll.isVoted || false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Check if poll has ended
   const isPollEnded = poll.endDate ? new Date(poll.endDate) < new Date() : false;
@@ -61,10 +62,27 @@ export default function PollCard({ poll, onVote, isLoggedIn = false }: PollCardP
     }
   };
 
-  const handleVote = () => {
+  const handleVote = async () => {
     if (selectedOptions.length > 0 && onVote) {
-      onVote(poll.id, selectedOptions);
-      setHasVoted(true);
+      setIsSubmitting(true);
+      try {
+        await onVote(poll.id, selectedOptions);
+        // For polls that require login, we can track if user voted
+        if (poll.requireLogin) {
+          setHasVoted(true);
+        } else {
+          // For anonymous polls, show temporary success message
+          setHasVoted(true);
+          // Reset after a short delay to allow for poll refresh
+          setTimeout(() => {
+            setHasVoted(false);
+          }, 2000);
+        }
+      } catch (error) {
+        console.error('Vote failed:', error);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -163,10 +181,10 @@ export default function PollCard({ poll, onVote, isLoggedIn = false }: PollCardP
         {!hasVoted && canVote && (
           <Button
             onClick={handleVote}
-            disabled={selectedOptions.length === 0}
+            disabled={selectedOptions.length === 0 || isSubmitting}
             className="w-full"
           >
-            Vote
+            {isSubmitting ? 'Submitting...' : 'Vote'}
           </Button>
         )}
         
@@ -182,9 +200,15 @@ export default function PollCard({ poll, onVote, isLoggedIn = false }: PollCardP
           </div>
         )}
         
-        {hasVoted && (
+        {hasVoted && poll.requireLogin && (
           <div className="text-center text-sm text-muted-foreground">
             You have voted on this poll
+          </div>
+        )}
+        
+        {hasVoted && !poll.requireLogin && (
+          <div className="text-center text-sm text-green-600">
+            ✓ Vote submitted successfully
           </div>
         )}
       </CardContent>

@@ -60,22 +60,25 @@ export default function PollsPage() {
       
       if (voteError) {
         setError(voteError.message);
-        return;
+        throw new Error(voteError.message);
       }
 
       if (success) {
-        // Update user votes locally
-        setUserVotes(prev => ({
-          ...prev,
-          [pollId]: optionIds
-        }));
+        // For logged-in users, update user votes locally
+        if (isLoggedIn) {
+          setUserVotes(prev => ({
+            ...prev,
+            [pollId]: optionIds
+          }));
+        }
         
-        // Refresh polls to get updated vote counts
+        // Always refresh polls to get updated vote counts
         await fetchPolls();
       }
     } catch (err) {
       setError("Failed to vote on poll");
       console.error('Error voting:', err);
+      throw err;
     }
   };
 
@@ -171,7 +174,7 @@ export default function PollsPage() {
               allowMultipleVotes: poll.allow_multiple_votes,
               requireLogin: poll.require_login,
               endDate: poll.end_date,
-              isVoted: userVotes[poll.id]?.length > 0
+              isVoted: poll.require_login ? userVotes[poll.id]?.length > 0 : false
             }}
             isLoggedIn={isLoggedIn}
             onVote={handleVote}
