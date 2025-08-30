@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,9 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { X } from "lucide-react";
+import { createPoll } from "@/lib/api/polls";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CreatePollFormProps {
-  onSubmit?: (pollData: PollData) => void;
+  onSubmit?: (pollData: any) => void;
 }
 
 interface PollData {
@@ -32,11 +35,57 @@ export default function CreatePollForm({ onSubmit }: CreatePollFormProps) {
     requireLogin: true,
     endDate: "",
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const { user } = useAuth();
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (onSubmit) {
-      onSubmit(formData);
+    
+    if (!user) {
+      setError("You must be logged in to create a poll");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      // Filter out empty options
+      const validOptions = formData.options.filter(opt => opt.trim());
+      
+      if (validOptions.length < 2) {
+        setError("You must provide at least 2 options");
+        setLoading(false);
+        return;
+      }
+
+      const { poll, error: createError } = await createPoll({
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        options: validOptions,
+        allowMultipleVotes: formData.allowMultipleVotes,
+        requireLogin: formData.requireLogin,
+        endDate: formData.endDate || undefined,
+      });
+
+      if (createError) {
+        setError(createError.message);
+      } else if (poll) {
+        // Call the onSubmit callback if provided
+        if (onSubmit) {
+          onSubmit(poll);
+        }
+        
+        // Redirect to the polls page
+        router.push('/polls');
+      }
+    } catch (err) {
+      setError("An unexpected error occurred. Please try again.");
+      console.error('Error creating poll:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -69,6 +118,26 @@ export default function CreatePollForm({ onSubmit }: CreatePollFormProps) {
   const isValid = formData.title.trim() && 
                  formData.options.filter(opt => opt.trim()).length >= 2;
 
+  if (!user) {
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <h3 className="text-lg font-medium text-muted-foreground mb-2">
+              Login Required
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              You must be logged in to create polls.
+            </p>
+            <Button onClick={() => router.push('/auth/login')}>
+              Sign In
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -79,6 +148,12 @@ export default function CreatePollForm({ onSubmit }: CreatePollFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+              {error}
+            </div>
+          )}
+          
           <div className="space-y-2">
             <Label htmlFor="title">Poll Question</Label>
             <Input
@@ -87,6 +162,7 @@ export default function CreatePollForm({ onSubmit }: CreatePollFormProps) {
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               required
+              disabled={loading}
             />
           </div>
 
@@ -98,6 +174,7 @@ export default function CreatePollForm({ onSubmit }: CreatePollFormProps) {
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
+              disabled={loading}
             />
           </div>
 
@@ -117,6 +194,7 @@ export default function CreatePollForm({ onSubmit }: CreatePollFormProps) {
                     value={option}
                     onChange={(e) => updateOption(index, e.target.value)}
                     required
+                    disabled={loading}
                   />
                   {formData.options.length > 2 && (
                     <Button
@@ -125,6 +203,7 @@ export default function CreatePollForm({ onSubmit }: CreatePollFormProps) {
                       size="icon"
                       onClick={() => removeOption(index)}
                       className="shrink-0"
+                      disabled={loading}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -138,6 +217,7 @@ export default function CreatePollForm({ onSubmit }: CreatePollFormProps) {
               variant="outline"
               onClick={addOption}
               className="w-full"
+              disabled={loading}
             >
               Add Option
             </Button>
@@ -155,6 +235,7 @@ export default function CreatePollForm({ onSubmit }: CreatePollFormProps) {
                   onCheckedChange={(checked) => 
                     setFormData({ ...formData, allowMultipleVotes: checked as boolean })
                   }
+                  disabled={loading}
                 />
                 <Label htmlFor="allowMultipleVotes" className="text-sm font-normal">
                   Allow users to select multiple options
@@ -168,6 +249,7 @@ export default function CreatePollForm({ onSubmit }: CreatePollFormProps) {
                   onCheckedChange={(checked) => 
                     setFormData({ ...formData, requireLogin: checked as boolean })
                   }
+                  disabled={loading}
                 />
                 <Label htmlFor="requireLogin" className="text-sm font-normal">
                   Require users to be logged in to vote
@@ -182,6 +264,7 @@ export default function CreatePollForm({ onSubmit }: CreatePollFormProps) {
                   value={formData.endDate}
                   onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                   min={new Date().toISOString().slice(0, 16)}
+                  disabled={loading}
                 />
                 <p className="text-xs text-muted-foreground">
                   Leave empty if you want the poll to run indefinitely
@@ -190,8 +273,8 @@ export default function CreatePollForm({ onSubmit }: CreatePollFormProps) {
             </div>
           </div>
 
-          <Button type="submit" disabled={!isValid} className="w-full">
-            Create Poll
+          <Button type="submit" disabled={!isValid || loading} className="w-full">
+            {loading ? "Creating Poll..." : "Create Poll"}
           </Button>
         </form>
       </CardContent>

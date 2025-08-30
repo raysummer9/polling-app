@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
+import { ensureProfileExists } from '@/lib/api/profiles';
 
 interface AuthContextType {
   user: User | null;
@@ -23,7 +24,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session
     const getInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+      if (session?.user) {
+        setUser(session.user);
+        // Ensure profile exists for the user
+        await ensureProfileExists(session.user.id, session.user);
+      }
       setLoading(false);
     };
 
@@ -32,7 +37,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user ?? null);
+        if (session?.user) {
+          setUser(session.user);
+          // Ensure profile exists for new users
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            await ensureProfileExists(session.user.id, session.user);
+          }
+        } else {
+          setUser(null);
+        }
         setLoading(false);
       }
     );

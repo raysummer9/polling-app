@@ -1,80 +1,96 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import PollCard from "@/components/polls/PollCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-
-// Sample data for demonstration
-const samplePolls = [
-  {
-    id: "1",
-    title: "What's your favorite programming language?",
-    description: "Let's see which programming language is most popular among developers.",
-    options: [
-      { id: "1-1", text: "JavaScript", votes: 45 },
-      { id: "1-2", text: "Python", votes: 38 },
-      { id: "1-3", text: "TypeScript", votes: 32 },
-      { id: "1-4", text: "Rust", votes: 15 },
-    ],
-    totalVotes: 130,
-    createdAt: "2024-01-15",
-    author: {
-      name: "John Doe",
-      avatar: "/avatars/john.jpg",
-    },
-    allowMultipleVotes: false,
-    requireLogin: true,
-    endDate: "2024-12-31T23:59:59",
-  },
-  {
-    id: "2",
-    title: "Which frameworks do you use for web development?",
-    description: "Select all the frameworks you currently use or have used in the past.",
-    options: [
-      { id: "2-1", text: "React", votes: 52 },
-      { id: "2-2", text: "Vue", votes: 28 },
-      { id: "2-3", text: "Angular", votes: 20 },
-      { id: "2-4", text: "Svelte", votes: 12 },
-      { id: "2-5", text: "Next.js", votes: 35 },
-    ],
-    totalVotes: 147,
-    createdAt: "2024-01-14",
-    author: {
-      name: "Jane Smith",
-      avatar: "/avatars/jane.jpg",
-    },
-    allowMultipleVotes: true,
-    requireLogin: false,
-    endDate: "2024-06-30T23:59:59",
-  },
-  {
-    id: "3",
-    title: "What's your preferred coffee type?",
-    description: "A simple poll about coffee preferences - no login required!",
-    options: [
-      { id: "3-1", text: "Espresso", votes: 25 },
-      { id: "3-2", text: "Cappuccino", votes: 30 },
-      { id: "3-3", text: "Latte", votes: 35 },
-      { id: "3-4", text: "Americano", votes: 20 },
-    ],
-    totalVotes: 110,
-    createdAt: "2024-01-13",
-    author: {
-      name: "Coffee Lover",
-      avatar: "/avatars/coffee.jpg",
-    },
-    allowMultipleVotes: false,
-    requireLogin: false,
-    // No end date - runs indefinitely
-  },
-];
+import { getPolls, voteOnPoll, getUserVotes } from "@/lib/api/polls";
+import { PollWithOptions } from "@/lib/types/database";
 
 export default function PollsPage() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [polls, setPolls] = useState<PollWithOptions[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [userVotes, setUserVotes] = useState<Record<string, string[]>>({});
+
   const isLoggedIn = !!user;
+
+  useEffect(() => {
+    fetchPolls();
+  }, []);
+
+  const fetchPolls = async () => {
+    try {
+      setLoading(true);
+      const { polls: fetchedPolls, error: pollsError } = await getPolls();
+      
+      if (pollsError) {
+        setError(pollsError.message);
+        return;
+      }
+
+      if (fetchedPolls) {
+        setPolls(fetchedPolls);
+        
+        // Fetch user votes for each poll if logged in
+        if (isLoggedIn) {
+          const votesMap: Record<string, string[]> = {};
+          for (const poll of fetchedPolls) {
+            const { votes } = await getUserVotes(poll.id);
+            votesMap[poll.id] = votes;
+          }
+          setUserVotes(votesMap);
+        }
+      }
+    } catch (err) {
+      setError("Failed to fetch polls");
+      console.error('Error fetching polls:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVote = async (pollId: string, optionIds: string[]) => {
+    try {
+      const { success, error: voteError } = await voteOnPoll(pollId, optionIds);
+      
+      if (voteError) {
+        setError(voteError.message);
+        return;
+      }
+
+      if (success) {
+        // Update user votes locally
+        setUserVotes(prev => ({
+          ...prev,
+          [pollId]: optionIds
+        }));
+        
+        // Refresh polls to get updated vote counts
+        await fetchPolls();
+      }
+    } catch (err) {
+      setError("Failed to vote on poll");
+      console.error('Error voting:', err);
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -105,6 +121,12 @@ export default function PollsPage() {
         )}
       </div>
 
+      {error && (
+        <div className="mb-6 p-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+          {error}
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1">
           <Input placeholder="Search polls..." />
@@ -122,20 +144,42 @@ export default function PollsPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {samplePolls.map((poll) => (
+        {polls.map((poll) => (
           <PollCard
             key={poll.id}
-            poll={poll}
-            isLoggedIn={isLoggedIn}
-            onVote={(pollId, optionIds) => {
-              console.log(`Voted on poll ${pollId}, options:`, optionIds);
-              // TODO: Implement voting logic
+            poll={{
+              id: poll.id,
+              title: poll.title,
+              description: poll.description || '',
+              options: poll.poll_options.map(opt => ({
+                id: opt.id,
+                text: opt.text,
+                votes: opt.votes
+              })),
+              totalVotes: poll.total_votes,
+              createdAt: poll.created_at,
+              updatedAt: poll.updated_at,
+              authorId: poll.author_id,
+              author: {
+                id: poll.author.id,
+                name: poll.author.name,
+                email: '',
+                avatar: poll.author.avatar_url,
+                createdAt: poll.author.created_at || '',
+                updatedAt: poll.author.updated_at || ''
+              },
+              allowMultipleVotes: poll.allow_multiple_votes,
+              requireLogin: poll.require_login,
+              endDate: poll.end_date,
+              isVoted: userVotes[poll.id]?.length > 0
             }}
+            isLoggedIn={isLoggedIn}
+            onVote={handleVote}
           />
         ))}
       </div>
 
-      {samplePolls.length === 0 && (
+      {polls.length === 0 && !loading && (
         <div className="text-center py-12">
           <h3 className="text-lg font-medium text-muted-foreground mb-2">
             No polls found

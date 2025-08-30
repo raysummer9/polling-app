@@ -13,12 +13,7 @@ export default function CreatePollPage() {
           </p>
         </div>
         
-        <CreatePollForm
-          onSubmit={(pollData) => {
-            console.log("Creating poll:", pollData);
-            // TODO: Implement poll creation logic
-          }}
-        />
+        <CreatePollForm />
       </div>
     </div>
   );

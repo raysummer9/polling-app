@@ -2,8 +2,13 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { getPollsServer } from "@/lib/api/polls-server";
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Get recent polls
+  const { polls, error } = await getPollsServer();
+  const recentPolls = polls ? polls.slice(0, 3) : [];
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -100,85 +105,57 @@ export default function HomePage() {
             </Link>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">What's your favorite programming language?</CardTitle>
-                <CardDescription>Let's see which programming language is most popular among developers.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>JavaScript</span>
-                    <span className="text-muted-foreground">45 votes (35%)</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Python</span>
-                    <span className="text-muted-foreground">38 votes (29%)</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>TypeScript</span>
-                    <span className="text-muted-foreground">32 votes (25%)</span>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <Badge variant="secondary">130 total votes</Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Which framework do you prefer?</CardTitle>
-                <CardDescription>Share your experience with different web frameworks.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>React</span>
-                    <span className="text-muted-foreground">52 votes (46%)</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Vue</span>
-                    <span className="text-muted-foreground">28 votes (25%)</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Angular</span>
-                    <span className="text-muted-foreground">20 votes (18%)</span>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <Badge variant="secondary">112 total votes</Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">What's your preferred database?</CardTitle>
-                <CardDescription>Which database technology do you use most often?</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>PostgreSQL</span>
-                    <span className="text-muted-foreground">42 votes (40%)</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>MongoDB</span>
-                    <span className="text-muted-foreground">35 votes (33%)</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>MySQL</span>
-                    <span className="text-muted-foreground">28 votes (27%)</span>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <Badge variant="secondary">105 total votes</Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {recentPolls.length > 0 ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recentPolls.map((poll) => {
+                const totalVotes = poll.poll_options.reduce((total, option) => total + (option.votes || 0), 0);
+                
+                return (
+                  <Card key={poll.id}>
+                    <CardHeader>
+                      <CardTitle className="text-lg">{poll.title}</CardTitle>
+                      <CardDescription>{poll.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {poll.poll_options.slice(0, 3).map((option) => {
+                          const percentage = totalVotes > 0 ? Math.round((option.votes || 0) / totalVotes * 100) : 0;
+                          return (
+                            <div key={option.id} className="flex justify-between text-sm">
+                              <span className="truncate">{option.text}</span>
+                              <span className="text-muted-foreground">
+                                {option.votes || 0} votes ({percentage}%)
+                              </span>
+                            </div>
+                          );
+                        })}
+                        {poll.poll_options.length > 3 && (
+                          <p className="text-xs text-muted-foreground">
+                            +{poll.poll_options.length - 3} more options
+                          </p>
+                        )}
+                      </div>
+                      <div className="mt-4">
+                        <Badge variant="secondary">{totalVotes} total votes</Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                No polls yet
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Be the first to create a poll and start gathering opinions!
+              </p>
+              <Link href="/create-poll">
+                <Button>Create Your First Poll</Button>
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 

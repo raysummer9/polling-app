@@ -1,3 +1,7 @@
+// Re-export database types
+export * from './database';
+
+// Legacy types for backward compatibility
 export interface User {
   id: string;
   name: string;
@@ -31,11 +35,14 @@ export interface CreatePollData {
   title: string;
   description: string;
   options: string[];
+  allowMultipleVotes: boolean;
+  requireLogin: boolean;
+  endDate?: string;
 }
 
 export interface VoteData {
   pollId: string;
-  optionId: string;
+  optionIds: string[]; // Updated to support multiple votes
 }
 
 export interface AuthResponse {
@@ -53,4 +60,30 @@ export interface RegisterData {
   email: string;
   password: string;
   confirmPassword: string;
+}
+
+// Helper function to convert database types to legacy types
+export function convertPollFromDatabase(dbPoll: any, dbOptions: any[], dbAuthor: any): Poll {
+  return {
+    id: dbPoll.id,
+    title: dbPoll.title,
+    description: dbPoll.description || '',
+    options: dbOptions.map(opt => ({
+      id: opt.id,
+      text: opt.text,
+      votes: opt.votes
+    })),
+    totalVotes: dbPoll.total_votes,
+    createdAt: dbPoll.created_at,
+    updatedAt: dbPoll.updated_at,
+    authorId: dbPoll.author_id,
+    author: {
+      id: dbAuthor.id,
+      name: dbAuthor.name,
+      email: dbAuthor.email || '',
+      avatar: dbAuthor.avatar_url,
+      createdAt: dbAuthor.created_at,
+      updatedAt: dbAuthor.updated_at
+    }
+  };
 }

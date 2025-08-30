@@ -54,9 +54,14 @@ export default function Header() {
               Browse Polls
             </Link>
             {user && (
-              <Link href="/create-poll" className="text-sm font-medium hover:text-primary transition-colors">
-                Create Poll
-              </Link>
+              <>
+                <Link href="/create-poll" className="text-sm font-medium hover:text-primary transition-colors">
+                  Create Poll
+                </Link>
+                <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">
+                  Dashboard
+                </Link>
+              </>
             )}
           </nav>
         </div>
