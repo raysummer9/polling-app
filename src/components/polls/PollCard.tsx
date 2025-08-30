@@ -157,7 +157,7 @@ export default function PollCard({ poll, onVote, isLoggedIn = false }: PollCardP
                   <Checkbox
                     checked={isSelected}
                     className="absolute top-3 right-3"
-                    readOnly
+                    disabled
                   />
                 )}
                 <div className="flex items-center justify-between">
@@ -207,8 +207,8 @@ export default function PollCard({ poll, onVote, isLoggedIn = false }: PollCardP
         )}
         
         {hasVoted && !poll.requireLogin && (
-          <div className="text-center text-sm text-green-600">
-            ✓ Vote submitted successfully
+          <div className="text-center text-sm text-muted-foreground">
+            You have already voted from this IP address
           </div>
         )}
       </CardContent>

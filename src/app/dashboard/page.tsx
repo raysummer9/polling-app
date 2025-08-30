@@ -4,7 +4,7 @@ import { getUserPollsServer } from '@/lib/api/polls-server';
 import DashboardPolls from '@/components/dashboard/DashboardPolls';
 
 export default async function DashboardPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   // Get the current user
   const { data: { user }, error: userError } = await supabase.auth.getUser();

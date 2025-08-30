@@ -1,111 +1,28 @@
-"use client";
+import { Suspense } from "react";
+import PollsClient from "@/components/polls/PollsClient";
+import { getPollsServer, getUserVotesWithIpServer } from "@/lib/api/polls-server";
+import { createClient } from "@/lib/supabase/server";
 
-import { useState, useEffect } from "react";
-import PollCard from "@/components/polls/PollCard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import Link from "next/link";
-import { useAuth } from "@/contexts/AuthContext";
-import { getPolls, voteOnPoll, getUserVotes } from "@/lib/api/polls";
-import { PollWithOptions } from "@/lib/types/database";
-
-export default function PollsPage() {
-  const { user, loading: authLoading } = useAuth();
-  const [polls, setPolls] = useState<PollWithOptions[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [userVotes, setUserVotes] = useState<Record<string, string[]>>({});
-
-  const isLoggedIn = !!user;
-
-  useEffect(() => {
-    fetchPolls();
-  }, []);
-
-  const fetchPolls = async () => {
-    try {
-      setLoading(true);
-      const { polls: fetchedPolls, error: pollsError } = await getPolls();
-      
-      if (pollsError) {
-        setError(pollsError.message);
-        return;
-      }
-
-      if (fetchedPolls) {
-        setPolls(fetchedPolls);
-        
-        // Fetch user votes for each poll if logged in
-        if (isLoggedIn) {
-          const votesMap: Record<string, string[]> = {};
-          for (const poll of fetchedPolls) {
-            const { votes } = await getUserVotes(poll.id);
-            votesMap[poll.id] = votes;
-          }
-          setUserVotes(votesMap);
-        }
-      }
-    } catch (err) {
-      setError("Failed to fetch polls");
-      console.error('Error fetching polls:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVote = async (pollId: string, optionIds: string[]) => {
-    try {
-      const { success, error: voteError } = await voteOnPoll(pollId, optionIds);
-      
-      if (voteError) {
-        setError(voteError.message);
-        throw new Error(voteError.message);
-      }
-
-      if (success) {
-        // For logged-in users, update user votes locally
-        if (isLoggedIn) {
-          setUserVotes(prev => ({
-            ...prev,
-            [pollId]: optionIds
-          }));
-        }
-        
-        // Always refresh polls to get updated vote counts
-        await fetchPolls();
-      }
-    } catch (err) {
-      setError("Failed to vote on poll");
-      console.error('Error voting:', err);
-      throw err;
-    }
-  };
-
-  if (authLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading...</p>
-          </div>
-        </div>
-      </div>
-    );
+export default async function PollsPage() {
+  const supabase = await createClient();
+  
+  // Get the current user
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  
+  // Get polls
+  const { polls, error: pollsError } = await getPollsServer();
+  
+  if (pollsError) {
+    console.error('Error fetching polls:', pollsError);
   }
 
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading polls...</p>
-          </div>
-        </div>
-      </div>
-    );
+  // Get user votes for each poll
+  const userVotes: Record<string, string[]> = {};
+  if (polls) {
+    for (const poll of polls) {
+      const { votes } = await getUserVotesWithIpServer(poll.id);
+      userVotes[poll.id] = votes;
+    }
   }
 
   return (
@@ -117,90 +34,28 @@ export default function PollsPage() {
             Discover and vote on polls created by the community
           </p>
         </div>
-        {isLoggedIn && (
-          <Link href="/create-poll">
-            <Button>Create New Poll</Button>
-          </Link>
+        {user && (
+          <a href="/create-poll" className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+            Create New Poll
+          </a>
         )}
       </div>
 
-      {error && (
-        <div className="mb-6 p-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
-          {error}
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading polls...</p>
+          </div>
         </div>
-      )}
-
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="flex-1">
-          <Input placeholder="Search polls..." />
-        </div>
-        <Select defaultValue="recent">
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="recent">Most Recent</SelectItem>
-            <SelectItem value="popular">Most Popular</SelectItem>
-            <SelectItem value="votes">Most Votes</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {polls.map((poll) => (
-          <PollCard
-            key={poll.id}
-            poll={{
-              id: poll.id,
-              title: poll.title,
-              description: poll.description || '',
-              options: poll.poll_options.map(opt => ({
-                id: opt.id,
-                text: opt.text,
-                votes: opt.votes
-              })),
-              totalVotes: poll.total_votes,
-              createdAt: poll.created_at,
-              updatedAt: poll.updated_at,
-              authorId: poll.author_id,
-              author: {
-                id: poll.author.id,
-                name: poll.author.name,
-                email: '',
-                avatar: poll.author.avatar_url,
-                createdAt: poll.author.created_at || '',
-                updatedAt: poll.author.updated_at || ''
-              },
-              allowMultipleVotes: poll.allow_multiple_votes,
-              requireLogin: poll.require_login,
-              endDate: poll.end_date,
-              isVoted: poll.require_login ? userVotes[poll.id]?.length > 0 : false
-            }}
-            isLoggedIn={isLoggedIn}
-            onVote={handleVote}
-          />
-        ))}
-      </div>
-
-      {polls.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium text-muted-foreground mb-2">
-            No polls found
-          </h3>
-          <p className="text-muted-foreground mb-4">
-            Be the first to create a poll and start gathering opinions!
-          </p>
-          {isLoggedIn ? (
-            <Link href="/create-poll">
-              <Button>Create Your First Poll</Button>
-            </Link>
-          ) : (
-            <Link href="/auth/login">
-              <Button>Sign In to Create Polls</Button>
-            </Link>
-          )}
-        </div>
-      )}
+      }>
+        <PollsClient 
+          initialPolls={polls || []} 
+          initialUserVotes={userVotes}
+          user={user}
+          error={pollsError?.message}
+        />
+      </Suspense>
     </div>
   );
 }

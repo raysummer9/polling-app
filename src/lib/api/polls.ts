@@ -94,7 +94,10 @@ export async function getPolls() {
         author:profiles!polls_author_id_fkey (
           id,
           name,
-          avatar_url
+          avatar_url,
+          bio,
+          created_at,
+          updated_at
         )
       `)
       .eq('status', 'active')
@@ -121,7 +124,10 @@ export async function getPollById(pollId: string) {
         author:profiles!polls_author_id_fkey (
           id,
           name,
-          avatar_url
+          avatar_url,
+          bio,
+          created_at,
+          updated_at
         )
       `)
       .eq('id', pollId)
@@ -268,7 +274,10 @@ export async function getUserPolls(userId: string) {
         author:profiles!polls_author_id_fkey (
           id,
           name,
-          avatar_url
+          avatar_url,
+          bio,
+          created_at,
+          updated_at
         )
       `)
       .eq('author_id', userId)
