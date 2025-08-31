@@ -96,7 +96,7 @@ BEGIN
   END IF;
   RETURN NULL;
 END;
-$$ language 'plpgsql';
+$$ language 'plpgsql' SECURITY DEFINER;
 
 -- Create trigger for vote updates
 CREATE TRIGGER update_vote_counts AFTER INSERT OR DELETE ON votes
