@@ -135,8 +135,13 @@ export default async function HomePage() {
                           </p>
                         )}
                       </div>
-                      <div className="mt-4">
+                      <div className="mt-4 flex items-center justify-between">
                         <Badge variant="secondary">{totalVotes} total votes</Badge>
+                        <Link href={`/polls/${poll.id}`}>
+                          <Button size="sm" variant="outline">
+                            View Poll
+                          </Button>
+                        </Link>
                       </div>
                     </CardContent>
                   </Card>
