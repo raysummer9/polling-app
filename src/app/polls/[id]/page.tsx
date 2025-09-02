@@ -5,26 +5,27 @@ import { getUserVotesWithIpServer } from '@/lib/api/polls-server';
 import PollDetailClient from '@/components/polls/PollDetailClient';
 
 interface PollDetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function PollDetailPage({ params }: PollDetailPageProps) {
+  const { id } = await params;
   const supabase = await createClient();
   
   // Get the current user
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   
   // Get poll details
-  const { poll, error: pollError } = await getPollByIdServer(params.id);
+  const { poll, error: pollError } = await getPollByIdServer(id);
   
   if (pollError || !poll) {
     notFound();
   }
 
   // Get user votes for this poll
-  const { votes: userVotes } = await getUserVotesWithIpServer(params.id);
+  const { votes: userVotes } = await getUserVotesWithIpServer(id);
 
   return (
     <div className="container mx-auto px-4 py-8">
