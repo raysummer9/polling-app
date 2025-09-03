@@ -1,6 +1,11 @@
 // Re-export database types
 export * from './database';
 
+// Re-export new modular types
+export * from './poll';
+export * from './error';
+export * from './auth';
+
 // Legacy types for backward compatibility
 export interface User {
   id: string;
