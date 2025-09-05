@@ -56,6 +56,76 @@ export function createAppError(
   };
 }
 
+/**
+ * Sanitizes error messages to prevent information disclosure
+ */
+export function sanitizeErrorMessage(
+  error: unknown,
+  operation: string,
+  userFacing: boolean = true
+): { message: string; details: string; code: string } {
+  // Log the full error for debugging (server-side only)
+  if (!userFacing) {
+    console.error(`[${operation}] Full error:`, error);
+  }
+
+  // Determine error type and provide safe user-facing messages
+  if ((error as { code?: string })?.code === 'PGRST116') {
+    return {
+      code: 'NOT_FOUND',
+      message: 'The requested resource was not found',
+      details: 'Please check your request and try again',
+    };
+  }
+
+  if ((error as { code?: string })?.code?.startsWith('23')) { // PostgreSQL constraint violations
+    return {
+      code: 'VALIDATION_ERROR',
+      message: 'The request contains invalid data',
+      details: 'Please check your input and try again',
+    };
+  }
+
+  if ((error as { code?: string })?.code?.startsWith('42')) { // PostgreSQL syntax errors
+    return {
+      code: 'DATABASE_ERROR',
+      message: 'A database error occurred',
+      details: 'Please try again later',
+    };
+  }
+
+  if ((error as { message?: string })?.message?.includes('duplicate key')) {
+    return {
+      code: 'CONFLICT',
+      message: 'This resource already exists',
+      details: 'Please use different data and try again',
+    };
+  }
+
+  if ((error as { message?: string })?.message?.includes('permission denied')) {
+    return {
+      code: 'AUTHORIZATION_ERROR',
+      message: 'You do not have permission to perform this action',
+      details: 'Please contact an administrator if you believe this is an error',
+    };
+  }
+
+  if ((error as { message?: string })?.message?.includes('timeout')) {
+    return {
+      code: 'TIMEOUT_ERROR',
+      message: 'The request timed out',
+      details: 'Please try again later',
+    };
+  }
+
+  // Generic fallback for unknown errors
+  return {
+    code: 'INTERNAL_ERROR',
+    message: 'An unexpected error occurred',
+    details: 'Please try again later or contact support if the problem persists',
+  };
+}
+
 export function createValidationError(
   message: string,
   fieldErrors: Record<string, string[]>,
@@ -63,6 +133,7 @@ export function createValidationError(
 ): ValidationError {
   return {
     ...createAppError('VALIDATION_ERROR', message, details),
+    code: 'VALIDATION_ERROR',
     fieldErrors,
   };
 }
@@ -74,6 +145,7 @@ export function createAuthenticationError(
 ): AuthenticationError {
   return {
     ...createAppError('AUTHENTICATION_ERROR', message, details),
+    code: 'AUTHENTICATION_ERROR',
     required,
   };
 }
@@ -86,6 +158,7 @@ export function createAuthorizationError(
 ): AuthorizationError {
   return {
     ...createAppError('AUTHORIZATION_ERROR', message, details),
+    code: 'AUTHORIZATION_ERROR',
     resource,
     action,
   };
@@ -98,6 +171,7 @@ export function createNotFoundError(
 ): NotFoundError {
   return {
     ...createAppError('NOT_FOUND', `Resource not found: ${resource}`, details),
+    code: 'NOT_FOUND',
     resource,
     identifier,
   };
@@ -107,10 +181,14 @@ export function createDatabaseError(
   message: string,
   operation: string,
   table?: string,
-  details?: string
+  _details?: string
 ): DatabaseError {
+  // Sanitize the error message for user-facing responses
+  const sanitized = sanitizeErrorMessage({ message, code: 'DATABASE_ERROR' }, operation, true);
+  
   return {
-    ...createAppError('DATABASE_ERROR', message, details),
+    ...createAppError('DATABASE_ERROR', sanitized.message, sanitized.details),
+    code: 'DATABASE_ERROR',
     operation,
     table,
   };
@@ -123,6 +201,7 @@ export function createRateLimitError(
 ): RateLimitError {
   return {
     ...createAppError('RATE_LIMIT_EXCEEDED', message, details),
+    code: 'RATE_LIMIT_EXCEEDED',
     retryAfter,
   };
 }
@@ -133,12 +212,12 @@ export interface ErrorResponse {
   error: AppError;
 }
 
-export interface SuccessResponse<T = any> {
+export interface SuccessResponse<T = unknown> {
   success: true;
   data: T;
 }
 
-export type ApiResponse<T = any> = SuccessResponse<T> | ErrorResponse;
+export type ApiResponse<T = unknown> = SuccessResponse<T> | ErrorResponse;
 
 // Helper function to create standardized responses
 export function createSuccessResponse<T>(data: T): SuccessResponse<T> {

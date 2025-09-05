@@ -1,11 +1,18 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { Database } from '@/lib/types/database'
+import { rateLimitMiddleware } from '@/lib/security/rate-limiter'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   })
+
+  // Apply rate limiting first
+  const rateLimitResult = await rateLimitMiddleware(request, 'general');
+  if (rateLimitResult) {
+    return rateLimitResult;
+  }
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -34,19 +41,37 @@ export async function updateSession(request: NextRequest) {
 
   const {
     data: { user },
+    error: userError
   } = await supabase.auth.getUser()
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/auth') &&
-    !request.nextUrl.pathname.startsWith('/api') &&
-    request.nextUrl.pathname !== '/'
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  // Enhanced session validation
+  if (userError) {
+    console.error('Session validation error:', userError);
+    // Clear invalid session
+    supabaseResponse.cookies.delete('sb-access-token');
+    supabaseResponse.cookies.delete('sb-refresh-token');
+  }
+
+  // Check for protected routes
+  const isProtectedRoute = !request.nextUrl.pathname.startsWith('/auth') &&
+                          !request.nextUrl.pathname.startsWith('/api') &&
+                          !request.nextUrl.pathname.startsWith('/_next') &&
+                          !request.nextUrl.pathname.startsWith('/favicon') &&
+                          request.nextUrl.pathname !== '/'
+
+  if (isProtectedRoute && !user) {
+    // Redirect to login with return URL
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
+    url.searchParams.set('redirect', request.nextUrl.pathname)
     return NextResponse.redirect(url)
   }
+
+  // Add security headers
+  supabaseResponse.headers.set('X-Frame-Options', 'DENY')
+  supabaseResponse.headers.set('X-Content-Type-Options', 'nosniff')
+  supabaseResponse.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  supabaseResponse.headers.set('X-XSS-Protection', '1; mode=block')
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
   // creating a new response object with NextResponse.next() make sure to:

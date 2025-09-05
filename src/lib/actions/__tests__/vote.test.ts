@@ -17,7 +17,7 @@ jest.mock('@/lib/supabase/server', () => ({
   })),
 }))
 
-import { voteOnPollServer, getUserVotesServer } from '../vote'
+import { voteOnPollServer, getUserVotesServer } from '../polls'
 
 describe('voteOnPollServer', () => {
   beforeEach(() => {
@@ -99,7 +99,7 @@ describe('voteOnPollServer', () => {
     const result = await voteOnPollServer('non-existent-poll-id', ['test-option-id'])
 
     expect(result.success).toBe(false)
-    expect(result.error?.message).toContain('Poll not found')
+    expect(result.error).toContain('Poll not found')
   })
 
   it('should return error when poll is not active', async () => {
@@ -130,7 +130,7 @@ describe('voteOnPollServer', () => {
     const result = await voteOnPollServer('test-poll-id', ['test-option-id'])
 
     expect(result.success).toBe(false)
-    expect(result.error?.message).toBe('Poll is not active')
+    expect(result.error).toBe('Poll is not active')
   })
 })
 

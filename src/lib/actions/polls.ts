@@ -22,44 +22,50 @@ import {
   PollFilters,
   PollPagination
 } from '@/lib/types/poll';
-import { isSuccessResponse, isErrorResponse } from '@/lib/types/error';
+import { isSuccessResponse, sanitizeErrorMessage } from '@/lib/types/error';
+import { withCSRFProtection } from '@/lib/security/csrf';
+import { validateSessionForSensitiveOperation } from '@/lib/security/session';
+import { withRateLimit } from '@/lib/security/rate-limiter';
 
 /**
- * Creates a new poll
+ * Creates a new poll with enhanced security
  */
-export async function createPollServer(input: CreatePollInput) {
-  try {
-    const user = await getCurrentUser();
-    
-    if (!user.isAuthenticated) {
-      return {
-        success: false,
-        error: 'Authentication required to create polls'
-      };
-    }
-
-    const result = await createPollOperation(input, user.id);
-    
-    if (isSuccessResponse(result)) {
-      return {
-        success: true,
-        poll: result.data,
-        error: null
-      };
-    } else {
-      return {
-        success: false,
-        error: result.error.message
-      };
-    }
-  } catch (error) {
-    console.error('Error in createPollServer:', error);
-    return {
-      success: false,
-      error: 'Failed to create poll'
-    };
-  }
-}
+export const createPollServer = withCSRFProtection(
+  withRateLimit(
+    async (input: CreatePollInput) => {
+      try {
+        // Enhanced session validation for sensitive operations
+        const { user } = await validateSessionForSensitiveOperation();
+        
+        const result = await createPollOperation(input, (user as { id: string }).id);
+        
+        if (isSuccessResponse(result)) {
+          return {
+            success: true,
+            poll: result.data,
+            error: null
+          };
+        } else {
+          const sanitized = sanitizeErrorMessage(result.error, 'createPoll', true);
+          return {
+            success: false,
+            error: sanitized.message
+          };
+        }
+      } catch (error) {
+        console.error('Error in createPollServer:', error);
+        const sanitized = sanitizeErrorMessage(error, 'createPoll', true);
+        return {
+          success: false,
+          error: sanitized.message
+        };
+      }
+    },
+    'polls',
+    'create'
+  ),
+  true // Require session
+);
 
 /**
  * Gets a poll by ID
@@ -208,70 +214,82 @@ export async function updatePollOptionsServer(
 }
 
 /**
- * Deletes a poll
+ * Deletes a poll with enhanced security
  */
-export async function deletePollServer(pollId: string) {
-  try {
-    const user = await getCurrentUser();
-    
-    if (!user.isAuthenticated) {
-      return {
-        success: false,
-        error: 'Authentication required to delete polls'
-      };
-    }
+export const deletePollServer = withCSRFProtection(
+  withRateLimit(
+    async (pollId: string) => {
+      try {
+        // Enhanced session validation for sensitive operations
+        const { user } = await validateSessionForSensitiveOperation();
 
-    const result = await deletePollOperation(pollId, user.id);
-    
-    if (isSuccessResponse(result)) {
-      return {
-        success: true,
-        error: null
-      };
-    } else {
-      return {
-        success: false,
-        error: result.error.message
-      };
-    }
-  } catch (error) {
-    console.error('Error in deletePollServer:', error);
-    return {
-      success: false,
-      error: 'Failed to delete poll'
-    };
-  }
-}
+        const result = await deletePollOperation(pollId, (user as { id: string }).id);
+        
+        if (isSuccessResponse(result)) {
+          return {
+            success: true,
+            error: null
+          };
+        } else {
+          const sanitized = sanitizeErrorMessage(result.error, 'deletePoll', true);
+          return {
+            success: false,
+            error: sanitized.message
+          };
+        }
+      } catch (error) {
+        console.error('Error in deletePollServer:', error);
+        const sanitized = sanitizeErrorMessage(error, 'deletePoll', true);
+        return {
+          success: false,
+          error: sanitized.message
+        };
+      }
+    },
+    'polls',
+    'delete'
+  ),
+  true // Require session
+);
 
 /**
- * Submits votes for a poll
+ * Submits votes for a poll with enhanced security
  */
-export async function voteOnPollServer(pollId: string, optionIds: string[]) {
-  try {
-    const user = await getCurrentUser();
-    const input: VoteInput = { pollId, optionIds };
+export const voteOnPollServer = withCSRFProtection(
+  withRateLimit(
+    async (pollId: string, optionIds: string[]) => {
+      try {
+        const user = await getCurrentUser();
+        const input: VoteInput = { pollId, optionIds };
 
-    const result = await submitVoteOperation(input, user);
-    
-    if (isSuccessResponse(result)) {
-      return {
-        success: true,
-        error: null
-      };
-    } else {
-      return {
-        success: false,
-        error: result.error.message
-      };
-    }
-  } catch (error) {
-    console.error('Error in voteOnPollServer:', error);
-    return {
-      success: false,
-      error: 'Failed to submit vote'
-    };
-  }
-}
+        const result = await submitVoteOperation(input, user);
+        
+        if (isSuccessResponse(result)) {
+          return {
+            success: true,
+            error: null
+          };
+        } else {
+          const sanitized = sanitizeErrorMessage(result.error, 'voteOnPoll', true);
+          return {
+            success: false,
+            error: sanitized.message
+          };
+        }
+      } catch (error) {
+        console.error('Error in voteOnPollServer:', error);
+        const sanitized = sanitizeErrorMessage(error, 'voteOnPoll', true);
+        return {
+          success: false,
+          error: sanitized.message
+        };
+      }
+    },
+    'polls',
+    'vote'
+  ),
+  false // Don't require session for anonymous voting
+);
 
 /**
  * Gets user votes for a specific poll

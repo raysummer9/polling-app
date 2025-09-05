@@ -183,7 +183,7 @@ export function requireResourceOwnership(
   }
 
   if (user.id !== resourceOwnerId) {
-    throw createNotFoundError('Resource not found or access denied');
+    throw createNotFoundError('Resource not found or access denied', 'unknown');
   }
 }
 

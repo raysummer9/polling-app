@@ -105,8 +105,8 @@ export async function createPollOperation(
     return createSuccessResponse(completePoll as PollWithOptions);
   } catch (error) {
     console.error('Error creating poll:', error);
-    if (error.code && error.code.startsWith('DATABASE_ERROR')) {
-      return createErrorResponse(error);
+    if ((error as any)?.code && (error as any).code.startsWith('DATABASE_ERROR')) {
+      return createErrorResponse(error as any);
     }
     return createErrorResponse(createDatabaseError(
       'Failed to create poll',
@@ -147,8 +147,8 @@ export async function getPollByIdOperation(pollId: string): Promise<ApiResponse<
     return createSuccessResponse(poll as PollWithOptions);
   } catch (error) {
     console.error('Error fetching poll:', error);
-    if (error.code && error.code.startsWith('DATABASE_ERROR')) {
-      return createErrorResponse(error);
+    if ((error as any)?.code && (error as any).code.startsWith('DATABASE_ERROR')) {
+      return createErrorResponse(error as any);
     }
     return createErrorResponse(createDatabaseError(
       'Failed to fetch poll',
@@ -227,8 +227,8 @@ export async function getPollsOperation(
     return createSuccessResponse(result);
   } catch (error) {
     console.error('Error fetching polls:', error);
-    if (error.code && error.code.startsWith('DATABASE_ERROR')) {
-      return createErrorResponse(error);
+    if ((error as any)?.code && (error as any).code.startsWith('DATABASE_ERROR')) {
+      return createErrorResponse(error as any);
     }
     return createErrorResponse(createDatabaseError(
       'Failed to fetch polls',
@@ -328,8 +328,8 @@ export async function updatePollOperation(
     return createSuccessResponse(completePoll as PollWithOptions);
   } catch (error) {
     console.error('Error updating poll:', error);
-    if (error.code && error.code.startsWith('DATABASE_ERROR')) {
-      return createErrorResponse(error);
+    if ((error as any)?.code && (error as any).code.startsWith('DATABASE_ERROR')) {
+      return createErrorResponse(error as any);
     }
     return createErrorResponse(createDatabaseError(
       'Failed to update poll',
@@ -443,8 +443,8 @@ export async function updatePollOptionsOperation(
     return createSuccessResponse(completePoll as PollWithOptions);
   } catch (error) {
     console.error('Error updating poll options:', error);
-    if (error.code && error.code.startsWith('DATABASE_ERROR')) {
-      return createErrorResponse(error);
+    if ((error as any)?.code && (error as any).code.startsWith('DATABASE_ERROR')) {
+      return createErrorResponse(error as any);
     }
     return createErrorResponse(createDatabaseError(
       'Failed to update poll options',
@@ -508,8 +508,8 @@ export async function deletePollOperation(
     return createSuccessResponse(true);
   } catch (error) {
     console.error('Error deleting poll:', error);
-    if (error.code && error.code.startsWith('DATABASE_ERROR')) {
-      return createErrorResponse(error);
+    if ((error as any)?.code && (error as any).code.startsWith('DATABASE_ERROR')) {
+      return createErrorResponse(error as any);
     }
     return createErrorResponse(createDatabaseError(
       'Failed to delete poll',

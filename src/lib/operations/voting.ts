@@ -105,8 +105,8 @@ export async function submitVoteOperation(
     return createSuccessResponse(true);
   } catch (error) {
     console.error('Error submitting vote:', error);
-    if (error.code && error.code.startsWith('DATABASE_ERROR')) {
-      return createErrorResponse(error);
+    if ((error as any)?.code && (error as any).code.startsWith('DATABASE_ERROR')) {
+      return createErrorResponse(error as any);
     }
     return createErrorResponse(createDatabaseError(
       'Failed to submit vote',
@@ -212,8 +212,8 @@ export async function getUserVotesOperation(
     return createSuccessResponse(optionIds);
   } catch (error) {
     console.error('Error getting user votes:', error);
-    if (error.code && error.code.startsWith('DATABASE_ERROR')) {
-      return createErrorResponse(error);
+    if ((error as any)?.code && (error as any).code.startsWith('DATABASE_ERROR')) {
+      return createErrorResponse(error as any);
     }
     return createErrorResponse(createDatabaseError(
       'Failed to get user votes',
@@ -294,8 +294,8 @@ export async function getPollVotesOperation(
     return createSuccessResponse(votes || []);
   } catch (error) {
     console.error('Error getting poll votes:', error);
-    if (error.code && error.code.startsWith('DATABASE_ERROR')) {
-      return createErrorResponse(error);
+    if ((error as any)?.code && (error as any).code.startsWith('DATABASE_ERROR')) {
+      return createErrorResponse(error as any);
     }
     return createErrorResponse(createDatabaseError(
       'Failed to get poll votes',
@@ -342,8 +342,8 @@ export async function removeVoteOperation(
     return createSuccessResponse(true);
   } catch (error) {
     console.error('Error removing vote:', error);
-    if (error.code && error.code.startsWith('DATABASE_ERROR')) {
-      return createErrorResponse(error);
+    if ((error as any)?.code && (error as any).code.startsWith('DATABASE_ERROR')) {
+      return createErrorResponse(error as any);
     }
     return createErrorResponse(createDatabaseError(
       'Failed to remove vote',
@@ -412,8 +412,8 @@ export async function getPollVotingStatsOperation(
     return createSuccessResponse(stats);
   } catch (error) {
     console.error('Error getting poll voting stats:', error);
-    if (error.code && error.code.startsWith('DATABASE_ERROR')) {
-      return createErrorResponse(error);
+    if ((error as any)?.code && (error as any).code.startsWith('DATABASE_ERROR')) {
+      return createErrorResponse(error as any);
     }
     return createErrorResponse(createDatabaseError(
       'Failed to get poll voting stats',

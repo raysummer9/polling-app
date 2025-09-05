@@ -9,21 +9,23 @@ import {
   updatePollOptions,
   deletePoll
 } from '../polls'
-import { 
-  mockSupabaseClient, 
-  mockCreateClient, 
-  mockUser, 
-  mockPoll, 
-  mockPollOption, 
-  mockVote,
-  mockProfile,
-  resetMocks,
-  setupAuthSuccess,
-  setupAuthFailure,
-  setupAnonymousUser
-} from '@/lib/test-utils'
-
 // Mock the Supabase client
+const mockCreateClient = jest.fn(() => ({
+  auth: {
+    getUser: jest.fn(),
+  },
+  from: jest.fn(() => ({
+    select: jest.fn(() => ({
+      eq: jest.fn(() => ({
+        single: jest.fn(),
+      })),
+    })),
+    insert: jest.fn(() => ({
+      error: null,
+    })),
+  })),
+}))
+
 jest.mock('@/lib/supabase/client', () => ({
   createClient: mockCreateClient,
 }))
