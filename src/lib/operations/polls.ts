@@ -19,13 +19,47 @@ import { validateCreatePollInput, validateUpdatePollInput, validateUpdatePollOpt
 
 /**
  * Creates a new poll with options
+ * 
+ * This function handles the complete poll creation process:
+ * - Validates input data (title, options, settings)
+ * - Sanitizes input to prevent XSS and injection attacks
+ * - Creates the poll record in the database
+ * - Creates associated poll options with proper ordering
+ * - Returns the complete poll with all options
+ * 
+ * The function ensures data integrity by:
+ * - Using database transactions (implicit via Supabase)
+ * - Validating all inputs before database operations
+ * - Creating options in the correct order
+ * - Fetching the complete poll after creation to ensure consistency
+ * 
+ * @param {CreatePollInput} input - The poll creation data including title, description, options, and settings
+ * @param {string} authorId - The ID of the user creating the poll
+ * @returns {Promise<ApiResponse<PollWithOptions>>} Success response with created poll or error response
+ * 
+ * @example
+ * ```typescript
+ * const result = await createPollOperation({
+ *   title: "What's your favorite color?",
+ *   description: "Choose your preferred color",
+ *   options: ["Red", "Blue", "Green"],
+ *   allowMultipleVotes: false,
+ *   requireLogin: true
+ * }, "user-123");
+ * 
+ * if (result.success) {
+ *   console.log("Poll created:", result.data);
+ * } else {
+ *   console.error("Error:", result.error);
+ * }
+ * ```
  */
 export async function createPollOperation(
   input: CreatePollInput,
   authorId: string
 ): Promise<ApiResponse<PollWithOptions>> {
   try {
-    // Validate input
+    // Validate input data to ensure it meets our requirements
     const validation = validateCreatePollInput(input);
     if (!validation.isValid) {
       return createErrorResponse({
@@ -37,12 +71,12 @@ export async function createPollOperation(
       });
     }
 
-    // Sanitize input
+    // Sanitize input to prevent XSS and other injection attacks
     const sanitizedInput = sanitizePollInput(input);
 
     const supabase = await createServerSupabaseClient();
 
-    // Create the poll
+    // Create the poll record in the database
     const { data: poll, error: pollError } = await supabase
       .from('polls')
       .insert({
@@ -64,7 +98,8 @@ export async function createPollOperation(
       );
     }
 
-    // Create poll options
+    // Create poll options with proper ordering
+    // Each option gets an order_index to maintain the order specified by the user
     const pollOptions = sanitizedInput.options.map((text, index) => ({
       poll_id: poll.id,
       text,
@@ -84,7 +119,8 @@ export async function createPollOperation(
       );
     }
 
-    // Get the complete poll with options
+    // Fetch the complete poll with all options to ensure data consistency
+    // This ensures we return exactly what was created, including any database defaults
     const { data: completePoll, error: fetchError } = await supabase
       .from('polls')
       .select(`
@@ -117,7 +153,34 @@ export async function createPollOperation(
 }
 
 /**
- * Gets a poll by ID with options
+ * Gets a poll by ID with all its options
+ * 
+ * This function retrieves a complete poll including:
+ * - Poll metadata (title, description, settings, dates)
+ * - All poll options with vote counts
+ * - Author information
+ * - Vote statistics
+ * 
+ * The function is used for:
+ * - Displaying individual poll pages
+ * - Poll detail views
+ * - Voting interfaces
+ * - Poll management operations
+ * 
+ * @param {string} pollId - The unique identifier of the poll to retrieve
+ * @returns {Promise<ApiResponse<PollWithOptions>>} Success response with poll data or error response
+ * 
+ * @example
+ * ```typescript
+ * const result = await getPollByIdOperation("poll-123");
+ * if (result.success) {
+ *   const poll = result.data;
+ *   console.log(`Poll: ${poll.title}`);
+ *   console.log(`Options: ${poll.poll_options.length}`);
+ * } else {
+ *   console.error("Poll not found or error occurred");
+ * }
+ * ```
  */
 export async function getPollByIdOperation(pollId: string): Promise<ApiResponse<PollWithOptions>> {
   try {
@@ -160,6 +223,38 @@ export async function getPollByIdOperation(pollId: string): Promise<ApiResponse<
 
 /**
  * Gets multiple polls with filtering and pagination
+ * 
+ * This function provides a flexible way to query polls with various filters and pagination.
+ * It supports:
+ * - Filtering by status, author, login requirements, multiple votes settings
+ * - Date range filtering (created after/before)
+ * - Pagination with configurable page size
+ * - Sorting by creation date (newest first)
+ * - Author profile information
+ * 
+ * The function is used for:
+ * - Poll listing pages
+ * - User dashboard (filtered by author)
+ * - Search and discovery features
+ * - Admin panels
+ * 
+ * @param {PollFilters} filters - Optional filters to apply to the query
+ * @param {Partial<PollPagination>} pagination - Optional pagination settings
+ * @returns {Promise<ApiResponse<PollsQueryResult>>} Success response with polls and pagination info or error response
+ * 
+ * @example
+ * ```typescript
+ * // Get recent polls with pagination
+ * const result = await getPollsOperation(
+ *   { status: 'active' },
+ *   { page: 1, limit: 10 }
+ * );
+ * 
+ * // Get user's polls
+ * const userPolls = await getPollsOperation(
+ *   { authorId: 'user-123' }
+ * );
+ * ```
  */
 export async function getPollsOperation(
   filters: PollFilters = {},

@@ -5,18 +5,42 @@ import { createAuthenticationError, createNotFoundError } from '@/lib/types/erro
 
 /**
  * Gets the current authenticated user from the server context
- * @returns The current user or null if not authenticated
+ * 
+ * This function is used in server-side operations to determine the current user.
+ * It:
+ * - Retrieves the user from Supabase Auth using server-side client
+ * - Fetches the user's profile from our profiles table
+ * - Creates a profile if it doesn't exist (handles edge cases)
+ * - Returns an anonymous user if authentication fails or user doesn't exist
+ * 
+ * This is the primary way to get user context in server actions and API routes.
+ * 
+ * @returns {Promise<AppUser>} The current authenticated user or anonymous user if not authenticated
+ * 
+ * @example
+ * ```typescript
+ * // In a server action
+ * export async function createPollServer(input: CreatePollInput) {
+ *   const user = await getCurrentUser();
+ *   if (!user.isAuthenticated) {
+ *     throw new Error('Authentication required');
+ *   }
+ *   // ... create poll with user.id
+ * }
+ * ```
  */
 export async function getCurrentUser(): Promise<AppUser> {
   try {
+    // Create server-side Supabase client with proper cookie handling
     const supabase = await createServerSupabaseClient();
     const { data: { user }, error } = await supabase.auth.getUser();
 
+    // Return anonymous user if authentication fails
     if (error || !user) {
       return createAnonymousUser();
     }
 
-    // Get user profile
+    // Fetch user profile from our profiles table
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
@@ -24,7 +48,8 @@ export async function getCurrentUser(): Promise<AppUser> {
       .single();
 
     if (profileError || !profile) {
-      // Create profile if it doesn't exist
+      // Create profile if it doesn't exist - this handles cases where
+      // the user exists in Supabase Auth but not in our profiles table
       const { data: newProfile, error: createError } = await supabase
         .from('profiles')
         .insert({

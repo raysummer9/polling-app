@@ -15,16 +15,59 @@ import { PollWithOptions } from '@/lib/types/database';
 import { deletePoll, updatePoll, updatePollOptions } from '@/lib/api/polls';
 import { useRouter } from 'next/navigation';
 
+/**
+ * Props interface for the DashboardPolls component
+ * 
+ * @interface DashboardPollsProps
+ * @property {PollWithOptions[]} initialPolls - Array of polls to display initially
+ * @property {string} userId - The ID of the current user (for authorization)
+ * @property {string} [error] - Optional error message to display
+ */
 interface DashboardPollsProps {
   initialPolls: PollWithOptions[];
   userId: string;
   error?: string;
 }
 
+/**
+ * Dashboard Polls Management Component
+ * 
+ * This component provides a comprehensive interface for users to manage their polls.
+ * It includes:
+ * 
+ * **Core Features:**
+ * - Display all user's polls in a responsive grid layout
+ * - Poll status indicators (Active/Ended)
+ * - Vote count and engagement metrics
+ * - Quick action buttons (View, Edit, Delete)
+ * 
+ * **Poll Management:**
+ * - Inline poll editing with form validation
+ * - Poll deletion with confirmation
+ * - Option management (add/remove/edit options)
+ * - Settings updates (multiple votes, login requirements, end dates)
+ * 
+ * **User Experience:**
+ * - Real-time updates after operations
+ * - Loading states and error handling
+ * - Responsive design for mobile and desktop
+ * - Intuitive icons and visual feedback
+ * 
+ * **Security:**
+ * - Client-side validation
+ * - Server-side authorization (via API calls)
+ * - Confirmation dialogs for destructive actions
+ * 
+ * @param {DashboardPollsProps} props - Component props
+ * @returns {JSX.Element} The dashboard polls management interface
+ */
 export default function DashboardPolls({ initialPolls, userId, error }: DashboardPollsProps) {
+  // State management for polls and UI interactions
   const [polls, setPolls] = useState<PollWithOptions[]>(initialPolls);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(error || '');
+  
+  // State for poll editing functionality
   const [editingPoll, setEditingPoll] = useState<PollWithOptions | null>(null);
   const [editForm, setEditForm] = useState({
     title: '',
@@ -34,9 +77,22 @@ export default function DashboardPolls({ initialPolls, userId, error }: Dashboar
     endDate: '',
     options: [] as { id: string; text: string }[]
   });
+  
   const router = useRouter();
 
+  /**
+   * Handles poll deletion with confirmation
+   * 
+   * This function:
+   * - Shows a confirmation dialog to prevent accidental deletions
+   * - Calls the delete API with proper error handling
+   * - Updates the local state to remove the deleted poll
+   * - Provides user feedback for success/error states
+   * 
+   * @param {string} pollId - The ID of the poll to delete
+   */
   const handleDeletePoll = async (pollId: string) => {
+    // Require user confirmation for destructive action
     if (!confirm('Are you sure you want to delete this poll? This action cannot be undone.')) {
       return;
     }
@@ -51,6 +107,7 @@ export default function DashboardPolls({ initialPolls, userId, error }: Dashboar
       }
 
       if (success) {
+        // Remove the deleted poll from the local state
         setPolls(prev => prev.filter(poll => poll.id !== pollId));
         setErrorMessage('');
       }
